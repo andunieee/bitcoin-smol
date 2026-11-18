@@ -71,3 +71,12 @@ Pushing a `v*` tag runs `.github/workflows/release.yml`. It builds binaries for 
 (aarch64, x86_64) and Windows (x86_64), plus the APK, and attaches them to a GitHub release. The APK is signed with the
 keystore in the `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` repository secrets. Without them it is signed
 with a throwaway key, so Android won't install the next release over it.
+
+The tag names the Android version: `android/version.sh v1.2.3` turns it into the `versionName`/`versionCode` that
+`android/package.sh` puts in the APK, since `Cargo.toml` stays at 0.1.0. A new version code is required — Android
+won't install an APK with a lower one over the installed app, and zapstore won't publish one it has already seen.
+
+After the release is published, the `zapstore` job builds `packaging/zapstore` and publishes the APK to
+[zapstore](https://zapstore.dev) using the metadata in `zapstore.yaml`. It signs the NIP-C1 certificate proof with the
+same release keystore and the release event with the nsec in the `ZAPSTORE_OWNER_NSEC` repository secret; without that
+secret the step warns and skips. Locally, `just zapstore <tag>` does the same with the zapstore CLI.

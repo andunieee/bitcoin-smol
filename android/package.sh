@@ -3,6 +3,10 @@
 # compiles android/src into classes.dex, patches the manifest, adds the launcher icon, and repackages and signs the apk.
 #
 # usage: android/package.sh <apk> <keystore> <keystore password>
+#
+# cargo-apk takes the version from Cargo.toml, but releases are tagged and zapstore refuses a
+# version code it has already published, so ANDROID_VERSION_NAME and ANDROID_VERSION_CODE can
+# override them (the release workflow passes the tag's version).
 set -euo pipefail
 
 apk="$(realpath "$1")"
@@ -32,6 +36,14 @@ sed -e 's|android:hasCode="false"|android:hasCode="true"|' \
     -e 's|<application |<application android:icon="@mipmap/ic_launcher" |' \
     -e 's|</application>|<service android:name="cash.small.bitcoin.ForegroundService" android:exported="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="listens for trade messages over nostr while offers or trades are open"/></service></application>|' \
     "$manifest" > "$tmp/AndroidManifest.xml"
+
+if [ -n "${ANDROID_VERSION_NAME:-}" ] || [ -n "${ANDROID_VERSION_CODE:-}" ]; then
+    sed -i.bak \
+        -e "s|android:versionName=\"[^\"]*\"|android:versionName=\"${ANDROID_VERSION_NAME:?}\"|" \
+        -e "s|android:versionCode=\"[^\"]*\"|android:versionCode=\"${ANDROID_VERSION_CODE:?}\"|" \
+        "$tmp/AndroidManifest.xml"
+    rm -f "$tmp/AndroidManifest.xml.bak"
+fi
 grep -q MainActivity "$tmp/AndroidManifest.xml"
 grep -q ForegroundService "$tmp/AndroidManifest.xml"
 grep -q ic_launcher "$tmp/AndroidManifest.xml"

@@ -1,0 +1,22 @@
+# publish with `just zapstore <tag>`, and automatically on v* tags, see .github/workflows/release.yml
+name: bitcoin smol
+summary: a tiny peer-to-peer market for exchanging bitcoin and fiat over nostr
+description: |
+  There is no escrow, no arbiter, no usernames and no server. Every trade is based on trust alone, so smaller amounts are encouraged.
+
+  Makers post offers to buy or sell bitcoin for some fiat amount, at the market price plus a premium, over whatever payment methods they accept. Takers answer over encrypted messages scoped to that trade, with structured messages that guide the flow. After a trade you review how it went, and those reviews build a web of trust that promotes honest people and ostracizes bad ones.
+repository: https://github.com/andunieee/bitcoin-smol
+release_filter: '^v[0-9]+\.[0-9]+(\.[0-9]+)?$'
+license: MIT
+tags:
+  - bitcoin
+  - nostr
+  - p2p
+  - marketplace
+icon: android/res/mipmap-xxxhdpi/ic_launcher.png
+images:
+  - docs/static/screenshots/market.png
+  - docs/static/screenshots/trade.png
+  - docs/static/screenshots/profile.png
+# the github release also carries the desktop binaries
+match: '^bitcoin-smol-.*\.apk$'

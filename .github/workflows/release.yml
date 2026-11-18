@@ -53,6 +53,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: version from tag
+        run: |
+          version_env="$(android/version.sh "$GITHUB_REF_NAME")"
+          if [ -z "$version_env" ]; then
+            echo "::warning::tag $GITHUB_REF_NAME is not v<major>.<minor>[.<patch>]; using the version from Cargo.toml"
+          else
+            echo "$version_env" >> "$GITHUB_ENV"
+          fi
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi
@@ -105,3 +113,34 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+  zapstore:
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packaging/zapstore/go.mod
+          cache-dependency-path: packaging/zapstore/go.sum
+      - name: publish
+        env:
+          SIGN_WITH: ${{ secrets.ZAPSTORE_OWNER_NSEC }}
+          GITHUB_TOKEN: ${{ github.token }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SIGN_WITH" ]; then
+            echo "::warning::ZAPSTORE_OWNER_NSEC is not set, skipping the zapstore publish"
+            exit 0
+          fi
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set, skipping the zapstore publish"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          export ANDROID_KEYSTORE="$RUNNER_TEMP/release.keystore"
+          export ANDROID_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD"
+          (cd packaging/zapstore && go build -o "$RUNNER_TEMP/zapstore" .)
+          "$RUNNER_TEMP/zapstore"
